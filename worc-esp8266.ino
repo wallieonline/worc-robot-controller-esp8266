@@ -8,7 +8,14 @@
 #include <espnow.h>
 #include <EEPROM.h>
 
-//Assign CPPM channel order
+//Assign L293D pins
+#define PWMA_OUT_PIN 5
+#define PWMB_OUT_PIN 4
+#define DIR1A_OUT_PIN 0
+#define DIR1B_OUT_PIN 2
+#define FLED_OUT_PIN 16
+
+//Assign ESPNOW channel struct
 typedef struct rc_data_t {
   uint16_t AIL;
   uint16_t ELE;
@@ -19,16 +26,8 @@ typedef struct rc_data_t {
   uint16_t AUX3;
   uint16_t AUX4;
 } rc_data_t;
-
-//Create a struct
-rc_data_t gCppm;
-
-//Assign L293D pins
-#define PWMA_OUT_PIN 5
-#define PWMB_OUT_PIN 4
-#define DIR1A_OUT_PIN 0
-#define DIR1B_OUT_PIN 2
-#define FLED_OUT_PIN 16
+rc_data_t gEspn;
+boolean gGotEspn;
 
 //Assign RC values
 #define RC_NEUTRAL 1500
@@ -43,6 +42,8 @@ uint16_t gRcAux1 = 0;
 uint16_t gRcAux2 = 0;
 uint16_t gRcAux3 = 0;
 uint16_t gRcAux4 = 0;
+uint16_t unThrottleIn = 0;
+uint16_t unSteeringIn = 0;
 uint16_t unThrottleMin = RC_MIN;
 uint16_t unThrottleMax = RC_MAX;
 uint16_t unThrottleNeu = RC_NEUTRAL;
@@ -61,46 +62,67 @@ int gSteering = 0;
 int gMotorLeft = 0;
 int gMotorRight = 0;
 
-// callback function that will be executed when data is received
+//callback function that will be executed when data is received
 void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
-  memcpy(&gCppm, incomingData, sizeof(gCppm));
-  //Serial.print(gCppm.AIL); Serial.print("  ");
-  //Serial.print(gCppm.ELE); Serial.print("  ");
-  //Serial.print(gCppm.THR); Serial.print("  ");
-  //Serial.print(gCppm.RUD); Serial.println();
+  memcpy(&gEspn, incomingData, sizeof(gEspn));
+  gGotEspn = true;
+  //Serial.print(gEspn.AIL); Serial.print("  ");
+  //Serial.print(gEspn.ELE); Serial.print("  ");
+  //Serial.print(gEspn.THR); Serial.print("  ");
+  //Serial.print(gEspn.RUD); Serial.println();
 }
-
+ 
 void setup() {
-  // Initialize Serial Monitor
   Serial.begin(115200);
+  analogWriteRange(255);
+  analogWriteFreq(2000); //Between 500Hz and 5000Hz
   pinMode(PWMA_OUT_PIN,OUTPUT);
   pinMode(PWMB_OUT_PIN,OUTPUT);
   pinMode(DIR1A_OUT_PIN,OUTPUT);
   pinMode(DIR1B_OUT_PIN,OUTPUT);
   pinMode(FLED_OUT_PIN,OUTPUT);
-  delay(2000);
+  delay(2000); //Wait till boot is complete
+  // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
   // Init ESP-NOW
   if (esp_now_init() != 0) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-  //esp32 esp_now_register_recv_cb(OnDataRecv);
+  //esp32 - esp_now_register_recv_cb(OnDataRecv);
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
   esp_now_register_recv_cb(OnDataRecv);
 }
  
 void loop() {
-  uint16_t unThrottleIn = gCppm.ELE;
-  uint16_t unSteeringIn = gCppm.AIL;
-  if (gCppm.AIL) gRcAil = gCppm.AIL;
-  if (gCppm.ELE) gRcEle = gCppm.ELE;
-  if (gCppm.THR) gRcThr = gCppm.THR;
-  if (gCppm.RUD) gRcRud = gCppm.RUD;
-  if (gCppm.AUX1) gRcAux1 = gCppm.AUX1;
-  if (gCppm.AUX2) gRcAux2 = gCppm.AUX2;
-  if (gCppm.AUX3) gRcAux3 = gCppm.AUX3;
-  if (gCppm.AUX4) gRcAux4 = gCppm.AUX4;
+  static uint32_t current_millis;
+  static uint32_t last_millis = 0;
+  current_millis = millis();
+  if (gGotEspn) {
+    gGotEspn = false;
+    last_millis = current_millis;
+    unThrottleIn = gEspn.ELE;
+    unSteeringIn = gEspn.AIL;
+    if (gEspn.AIL) gRcAil = gEspn.AIL;
+    if (gEspn.ELE) gRcEle = gEspn.ELE;
+    if (gEspn.THR) gRcThr = gEspn.THR;
+    if (gEspn.RUD) gRcRud = gEspn.RUD;
+    if (gEspn.AUX1) gRcAux1 = gEspn.AUX1;
+    if (gEspn.AUX2) gRcAux2 = gEspn.AUX2;
+    if (gEspn.AUX3) gRcAux3 = gEspn.AUX3;
+    if (gEspn.AUX4) gRcAux4 = gEspn.AUX4;
+  } else if (current_millis >= last_millis + 200) {
+    unThrottleIn = RC_NEUTRAL;
+    unSteeringIn = RC_NEUTRAL;
+    gRcAil = RC_NEUTRAL;
+    gRcEle = RC_NEUTRAL;
+    gRcThr = RC_MIN;
+    gRcRud = RC_NEUTRAL;
+    gRcAux1 = RC_MIN;
+    gRcAux2 = RC_MIN;
+    gRcAux3 = RC_MIN;
+    gRcAux4 = RC_MIN;
+  }
 
   if (gMode == MODE_PROGRAM_WALLIEONLINE) {
     Serial.println("MODE_PROGRAM_WALLIEONLINE");
