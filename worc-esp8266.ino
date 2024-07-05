@@ -17,14 +17,14 @@
 
 //Assign ESPNOW channel struct
 typedef struct rc_data_t {
-  uint16_t AIL;
-  uint16_t ELE;
-  uint16_t THR;
-  uint16_t RUD;
-  uint16_t AUX1;
-  uint16_t AUX2;
-  uint16_t AUX3;
-  uint16_t AUX4;
+  uint16_t gAIL;
+  uint16_t gELE;
+  uint16_t gTHR;
+  uint16_t gRUD;
+  uint16_t gAUX1;
+  uint16_t gAUX2;
+  uint16_t gAUX3;
+  uint16_t gAUX4;
 } rc_data_t;
 rc_data_t gEspn;
 boolean gGotEspn;
@@ -66,10 +66,10 @@ int gMotorRight = 0;
 void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
   memcpy(&gEspn, incomingData, sizeof(gEspn));
   gGotEspn = true;
-  //Serial.print(gEspn.AIL); Serial.print("  ");
-  //Serial.print(gEspn.ELE); Serial.print("  ");
-  //Serial.print(gEspn.THR); Serial.print("  ");
-  //Serial.print(gEspn.RUD); Serial.println();
+  //Serial.print(gEspn.gAIL); Serial.print("  ");
+  //Serial.print(gEspn.gELE); Serial.print("  ");
+  //Serial.print(gEspn.gTHR); Serial.print("  ");
+  //Serial.print(gEspn.gRUD); Serial.println();
 }
  
 void setup() {
@@ -101,16 +101,16 @@ void loop() {
   if (gGotEspn) {
     gGotEspn = false;
     last_millis = current_millis;
-    unThrottleIn = gEspn.ELE;
-    unSteeringIn = gEspn.AIL;
-    if (gEspn.AIL) gRcAil = gEspn.AIL;
-    if (gEspn.ELE) gRcEle = gEspn.ELE;
-    if (gEspn.THR) gRcThr = gEspn.THR;
-    if (gEspn.RUD) gRcRud = gEspn.RUD;
-    if (gEspn.AUX1) gRcAux1 = gEspn.AUX1;
-    if (gEspn.AUX2) gRcAux2 = gEspn.AUX2;
-    if (gEspn.AUX3) gRcAux3 = gEspn.AUX3;
-    if (gEspn.AUX4) gRcAux4 = gEspn.AUX4;
+    unThrottleIn = gEspn.gELE;
+    unSteeringIn = gEspn.gAIL;
+    if (gEspn.gAIL) gRcAil = gEspn.gAIL;
+    if (gEspn.gELE) gRcEle = gEspn.gELE;
+    if (gEspn.gTHR) gRcThr = gEspn.gTHR;
+    if (gEspn.gRUD) gRcRud = gEspn.gRUD;
+    if (gEspn.gAUX1) gRcAux1 = gEspn.gAUX1;
+    if (gEspn.gAUX2) gRcAux2 = gEspn.gAUX2;
+    if (gEspn.gAUX3) gRcAux3 = gEspn.gAUX3;
+    if (gEspn.gAUX4) gRcAux4 = gEspn.gAUX4;
   } else if (current_millis >= last_millis + 200) {
     unThrottleIn = RC_NEUTRAL;
     unSteeringIn = RC_NEUTRAL;
