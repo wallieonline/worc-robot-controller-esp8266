@@ -71,7 +71,7 @@ void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
   //Serial.print(gEspn.gTHR); Serial.print("  ");
   //Serial.print(gEspn.gRUD); Serial.println();
 }
- 
+
 void setup() {
   Serial.begin(115200);
   analogWriteRange(255);
